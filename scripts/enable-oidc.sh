@@ -19,7 +19,7 @@ ROOT="$(repo_root)"
 TFDIR="$ROOT/infra/terraform"
 
 need gcloud    "Install: https://cloud.google.com/sdk/docs/install"
-need terraform "Install: https://developer.hashicorp.com/terraform/install"
+require_terraform
 
 [[ -f "$TFDIR/terraform.tfvars" ]] || die "run ./scripts/bootstrap.sh first"
 PROJECT="$(grep -E '^project_id' "$TFDIR/terraform.tfvars" | cut -d'"' -f2)"

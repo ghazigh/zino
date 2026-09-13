@@ -38,6 +38,18 @@ is not enabled: gcloud stops to ask *"enable and retry? (y/N)"*.
 `gcloud services list --enabled`. Both patterns are already in
 `scripts/bootstrap.sh` — follow them for any new gcloud call.
 
+### Terraform "runs" but nothing happens
+
+Cloud Shell ships a Terraform *placeholder* on PATH: it prints install
+instructions and exits 0. `command -v terraform` finds it and `terraform init`
+looks like it succeeded while doing nothing.
+
+**Fix:** `./scripts/install-terraform.sh && export PATH="$HOME/bin:$PATH"`
+
+`require_terraform` in `scripts/lib.sh` now catches this by checking the output
+starts with `Terraform v`. Presence on PATH is never sufficient proof a tool
+works — prefer asking a tool to identify itself.
+
 ### Cloud Shell disconnects mid-deploy
 
 It idles out after ~20 minutes and `terraform apply` on Cloud SQL is slow.

@@ -29,18 +29,22 @@ reproducible.
    git checkout claude/practical-lamport-492non
    ```
 
-4. Check Terraform is present, and install it if not:
+4. Install Terraform:
 
    ```sh
-   terraform version || {
-     curl -fsSL -o tf.zip https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
-     unzip -o tf.zip && mkdir -p ~/bin && mv terraform ~/bin/ && export PATH="$HOME/bin:$PATH"
-     terraform version
-   }
+   ./scripts/install-terraform.sh
+   export PATH="$HOME/bin:$PATH"
    ```
 
-   Terraform is normally pre-installed in Cloud Shell; this covers the case
-   where it is not.
+   Cloud Shell does **not** ship Terraform. What sits on `PATH` is a
+   placeholder that prints install instructions and then exits *successfully* —
+   so anything checking "is terraform installed?" is fooled, and `terraform
+   init` appears to work while doing nothing at all. The ZINO scripts now detect
+   this and refuse to continue.
+
+   The installer puts the real binary in `~/bin`, because Cloud Shell resets
+   system packages between sessions but keeps your home directory. `apt install
+   terraform` would not survive a reconnect; this does.
 
 5. Give Terraform credentials. Cloud Shell signs `gcloud` in for you, but
    Terraform reads a separate set:

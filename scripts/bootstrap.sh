@@ -46,7 +46,7 @@ STATE_BUCKET="${PROJECT}-zino-tfstate"
 
 info "Checking prerequisites"
 need gcloud   "Install: https://cloud.google.com/sdk/docs/install"
-need terraform "Install: https://developer.hashicorp.com/terraform/install"
+require_terraform
 need npx      "Install Node.js 18+: https://nodejs.org"
 
 if ! gcloud auth list --filter=status:ACTIVE --format='value(account)' | grep -q .; then

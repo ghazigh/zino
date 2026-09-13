@@ -25,6 +25,19 @@ confirm() {
   [[ "$reply" == "y" || "$reply" == "Y" ]]
 }
 
+# Terraform specifically: Cloud Shell ships a placeholder on PATH that prints
+# install instructions and exits 0. `command -v` sees it and `terraform init`
+# appears to succeed while doing nothing, so existence is not enough — the
+# binary has to actually identify itself.
+require_terraform() {
+  command -v terraform >/dev/null 2>&1 || {
+    die "terraform is not installed. Run: ./scripts/install-terraform.sh"
+  }
+  if ! terraform version 2>&1 | head -1 | grep -q '^Terraform v'; then
+    die "terraform on PATH is a placeholder, not the real thing (Cloud Shell does this). Run: ./scripts/install-terraform.sh"
+  fi
+}
+
 # Repository root, regardless of where the script was invoked from.
 repo_root() {
   git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel

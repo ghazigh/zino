@@ -22,7 +22,7 @@ ROOT="$(repo_root)"
 TFDIR="$ROOT/infra/terraform"
 
 need gcloud    "Install: https://cloud.google.com/sdk/docs/install"
-need terraform "Install: https://developer.hashicorp.com/terraform/install"
+require_terraform
 need npx       "Install Node.js 18+: https://nodejs.org"
 
 [[ -f "$TFDIR/backend.tf" ]] \

@@ -10,7 +10,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 ROOT="$(repo_root)"
 TFDIR="$ROOT/infra/terraform"
-need terraform "Install: https://developer.hashicorp.com/terraform/install"
+require_terraform
 
 PROJECT="$(grep -E '^project_id' "$TFDIR/terraform.tfvars" 2>/dev/null | cut -d'"' -f2 || true)"
 [[ -n "$PROJECT" ]] || die "no terraform.tfvars — nothing to destroy"
