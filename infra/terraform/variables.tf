@@ -32,3 +32,18 @@ variable "github_repository" {
   type        = string
   default     = "ghazigh/zino"
 }
+
+variable "enable_oidc" {
+  description = <<-EOT
+    Use Firebase Auth (OIDC) for login instead of Open WebUI's built-in
+    email/password accounts.
+
+    Left off by default because enabling it is NOT fully scriptable: creating
+    the OAuth client is a Google Cloud console step, and neither gcloud nor the
+    Firebase CLI can configure sign-in providers. Turn it on once you have
+    populated the zino-oauth-client-id and zino-oauth-client-secret secrets —
+    see scripts/enable-oidc.sh.
+  EOT
+  type        = bool
+  default     = false
+}

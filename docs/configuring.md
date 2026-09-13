@@ -22,6 +22,11 @@ The exception is OAuth: `ENABLE_OAUTH_PERSISTENT_CONFIG` defaults to **false**,
 so login settings stay env-driven on every boot. Login config lives in
 Terraform, where it belongs.
 
+Login itself is off-by-default in the sense that ZINO ships with Open WebUI's
+own email/password accounts and no OIDC. Run `./scripts/enable-oidc.sh` to
+switch to Google sign-in; `infra/firebase/README.md` explains why that one is
+not fully scriptable.
+
 ## Connecting a model provider
 
 **Admin Panel → Settings → Connections.**

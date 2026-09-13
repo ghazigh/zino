@@ -18,13 +18,12 @@ locals {
     database-url     = local.database_url
   }
 
-  # Secrets you populate yourself, from the Firebase console
-  # (see infra/firebase/README.md):
-  #   echo -n "<client-id>" | gcloud secrets versions add zino-oauth-client-id --data-file=-
-  unmanaged_secrets = [
+  # Secrets you populate yourself. Only created when OIDC login is enabled;
+  # see scripts/enable-oidc.sh, which creates them and prompts for the values.
+  unmanaged_secrets = var.enable_oidc ? [
     "oauth-client-id",
     "oauth-client-secret",
-  ]
+  ] : []
 }
 
 resource "google_secret_manager_secret" "managed" {

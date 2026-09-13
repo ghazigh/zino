@@ -28,7 +28,7 @@ resource "google_secret_manager_secret_iam_member" "webui_secrets" {
 }
 
 resource "google_secret_manager_secret_iam_member" "webui_oauth" {
-  for_each = toset(["oauth-client-id", "oauth-client-secret"])
+  for_each = toset(local.unmanaged_secrets)
 
   secret_id = google_secret_manager_secret.unmanaged[each.value].id
   role      = "roles/secretmanager.secretAccessor"

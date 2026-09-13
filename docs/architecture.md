@@ -31,7 +31,7 @@ provides the infrastructure that runs it on GCP, and the decisions about how.
                        ▼
             (out to whichever LLM APIs you connect)
 
-   Firebase Auth ──── OIDC ────▶ zino-webui
+   Firebase Auth ──── OIDC ────▶ zino-webui   (opt-in; off by default)
 ```
 
 ## Where configuration lives
@@ -51,6 +51,7 @@ none of them. Full detail in [configuring.md](configuring.md).
 
 | Path | What it is |
 |------|------------|
+| `scripts/` | CLI bootstrap, deploy, enable-oidc and destroy |
 | `infra/terraform/` | The entire GCP footprint |
 | `infra/firebase/` | Hosting and Auth notes; `firebase.json` is at the repo root |
 | `compose.yaml` | Local stack mirroring the production topology |
@@ -85,5 +86,10 @@ These are real and deliberate, not oversights:
   This is the single biggest line on the bill.
 - **Secrets depend on `WEBUI_SECRET_KEY`.** Provider API keys are encrypted with
   it. Rotating it invalidates all of them.
+- **Login is email/password until you opt in.** Firebase Auth needs an OAuth
+  client, and creating one is console-only, so it is not part of the default
+  path. `scripts/enable-oidc.sh` switches it on.
 - **Terraform has not been applied yet.** It is formatted and internally
-  consistent, but no `plan` has run against a real project.
+  consistent, but no `plan` has run against a real project. The deploy scripts
+  were exercised against stubbed `gcloud`/`terraform` binaries — control flow
+  and idempotency are verified, cloud-side command syntax is not.

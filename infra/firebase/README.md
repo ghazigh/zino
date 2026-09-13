@@ -1,50 +1,68 @@
 # Firebase layer
 
-Firebase does two jobs for ZINO. Neither of them is serving the app itself —
-that is Cloud Run.
+Firebase does two jobs for ZINO, and only one of them is set up by default.
 
-## 1. Hosting — edge, domain and TLS
+## 1. Hosting — edge, domain and TLS (automatic)
 
 `firebase.json` at the repo root rewrites every path to the `zino-webui` Cloud
-Run service. Firebase gives us a managed certificate, a CDN edge, and a custom
-domain without standing up a load balancer.
+Run service, giving us a managed certificate, a CDN edge and a custom domain
+without standing up a load balancer.
 
-```sh
-firebase use --add          # select the GCP project, alias it "prod"
-firebase deploy --only hosting
-```
+`scripts/deploy.sh` publishes this. Nothing here needs doing by hand.
 
-`public/` is intentionally empty: there are no static assets to serve, because
-the rewrite catches `**`. Firebase requires the directory to exist.
+`public/` is intentionally empty: there are no static assets, because the
+rewrite catches `**`. Firebase requires the directory to exist.
 
 > **Region.** The `region` in `firebase.json` must match `var.region` in
-> Terraform. It is hardcoded because `firebase.json` is not templated — if you
-> change the Terraform region, change it here too.
+> Terraform. It is hardcoded because `firebase.json` is not templated —
+> `scripts/bootstrap.sh` warns if the two disagree.
 
-## 2. Authentication — identity
+## 2. Authentication — identity (opt-in)
 
-Firebase Auth is the OIDC provider for Open WebUI. Terraform wires the
-Cloud Run side (`OPENID_PROVIDER_URL`, `OPENID_REDIRECT_URI`); the parts that
-have to be done in the console are:
+**ZINO does not use Firebase Auth by default.** Open WebUI's own
+email/password accounts work out of the box and need no configuration, which
+keeps the first deploy entirely scriptable.
 
-1. **Authentication → Sign-in method** — enable the providers you want
-   (Google is the least friction for a personal platform).
-2. **Authentication → Settings → Authorized domains** — add your custom domain.
-3. Create an OAuth client and put its credentials in Secret Manager:
+Turn on Google sign-in later with:
 
-   ```sh
-   echo -n "<client-id>"     | gcloud secrets versions add zino-oauth-client-id --data-file=-
-   echo -n "<client-secret>" | gcloud secrets versions add zino-oauth-client-secret --data-file=-
-   ```
+```sh
+./scripts/enable-oidc.sh
+```
 
-Until step 3 is done, Open WebUI falls back to its own email/password login,
-which is fine for a first boot — create your admin account that way. The first
-account to register becomes the administrator.
+That script does everything that can be done from a terminal — creating the
+secrets, storing the credentials, flipping `enable_oidc` — and tells you the
+two things that must be clicked.
+
+### Why two steps cannot be scripted
+
+This is a real gap in the tooling, not an oversight:
+
+- **The Firebase CLI cannot configure sign-in providers.** Its entire auth
+  surface is `auth:export` and `auth:import` — moving user records, not
+  settings.
+- **gcloud cannot create a generic OAuth 2.0 client.** `gcloud alpha iap
+  oauth-clients` exists, but only for Identity-Aware Proxy brands, which is a
+  different product path.
+
+So enabling the Google provider and copying its client credentials are console
+actions. Everything downstream of them is scripted.
+
+### What the script asks you to click
+
+1. **Enable the Google provider** —
+   `console.firebase.google.com/project/<project>/authentication/providers`
+2. **Add the redirect URI** to the OAuth client that step 1 created, at
+   `console.cloud.google.com/apis/credentials`:
+   `https://<your-domain>/oauth/oidc/callback`
+
+Existing email/password accounts survive the switch:
+`OAUTH_MERGE_ACCOUNTS_BY_EMAIL` is on, so signing in with Google on the same
+address adopts the existing account rather than creating a duplicate.
 
 ## What Firebase is deliberately *not* used for
 
 - **Firestore** — ZINO's state is relational and already lives in Cloud SQL.
   Adding Firestore would split the source of truth for no gain.
 - **Cloud Functions** — ZINO deploys no code of its own. Agents and tools are
-  authored inside Open WebUI and stored in its database (`docs/configuring.md`),
-  so there is nothing for a function to run.
+  authored inside Open WebUI and stored in its database
+  (`docs/configuring.md`), so there is nothing for a function to run.

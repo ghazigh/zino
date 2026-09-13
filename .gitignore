@@ -27,6 +27,9 @@ service-account*.json
 *.tfvars
 !*.tfvars.example
 .terraform.lock.hcl
+tfplan
+# Generated per-project by scripts/bootstrap.sh — the bucket name is yours, not ours.
+infra/terraform/backend.tf
 
 # Firebase
 .firebaserc

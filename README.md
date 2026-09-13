@@ -45,22 +45,41 @@ environment variables, so ZINO sets no model config in Terraform at all.
 
 ## Deploy it
 
+Two commands, from the terminal. No console clicking.
+
 ```sh
-cd infra/terraform
-cp terraform.tfvars.example terraform.tfvars   # set project_id
-terraform init && terraform apply
+gcloud auth login && gcloud auth application-default login
+
+./scripts/bootstrap.sh --project zino-prod --billing $(gcloud beta billing accounts list --format='value(ACCOUNT_ID)' | head -1)
+./scripts/deploy.sh
 ```
 
-Then the Firebase console steps for Hosting and Auth:
-[infra/firebase/README.md](infra/firebase/README.md).
+`bootstrap.sh` creates the project, links billing, enables the APIs, creates the
+versioned bucket for Terraform state, and writes the Terraform config. It is
+idempotent — re-running it changes nothing.
 
-CI authenticates with Workload Identity Federation, so no service-account key is
-ever created or stored.
+`deploy.sh` shows you a plan, asks before applying, waits for the app to answer,
+then publishes Firebase Hosting and prints your URL. Use `--plan-only` to look
+first.
+
+Login works immediately with Open WebUI's own accounts. To switch to Google
+sign-in later:
+
+```sh
+./scripts/enable-oidc.sh    # scripts everything except two console clicks
+```
+
+That is the one part that cannot be fully automated — neither gcloud nor the
+Firebase CLI can create an OAuth client or enable a sign-in provider. The script
+does the rest and tells you exactly what to click.
+
+To tear it all down: `./scripts/destroy.sh`.
 
 ## Repository map
 
 | Path | |
 |------|--|
+| `scripts/` | Bootstrap, deploy, enable-oidc, destroy |
 | `infra/terraform/` | The GCP footprint |
 | `infra/firebase/` | Hosting + Auth setup |
 | `compose.yaml` | Local stack, mirrors production |
@@ -71,10 +90,14 @@ ever created or stored.
 
 ## Status
 
-Infrastructure is defined and internally consistent; the local stack runs.
+Infrastructure and the deploy scripts are written; the local stack runs.
 
 **Not yet deployed.** Terraform has never been applied against a real GCP
-project — `terraform plan` is the next step, and the first run should be
-expected to surface errors. Known limits are in
-[docs/architecture.md](docs/architecture.md#known-limits); the one to read first
-is that a always-warm Cloud Run instance sets a monthly cost floor.
+project, and the scripts' `gcloud` calls were tested against stubs rather than
+against Google — the control flow, idempotency and generated files are verified,
+the cloud-side command syntax is not. Expect the first `bootstrap.sh` run to
+need a fix or two.
+
+Known limits are in [docs/architecture.md](docs/architecture.md#known-limits).
+The one to read first: an always-warm Cloud Run instance sets a monthly cost
+floor.

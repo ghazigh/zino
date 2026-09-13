@@ -12,14 +12,10 @@ terraform {
     }
   }
 
-  # Terraform state holds database passwords in plaintext. Keep it in a private,
-  # versioned GCS bucket — never on a laptop, never in git.
-  # Create the bucket once by hand, then uncomment and `terraform init -migrate-state`.
-  #
-  # backend "gcs" {
-  #   bucket = "zino-tfstate-CHANGEME"
-  #   prefix = "zino/prod"
-  # }
+  # The GCS backend is NOT declared here. Terraform state holds the generated
+  # database password in plaintext, so it belongs in a private, versioned
+  # bucket — and that bucket's name depends on your project ID.
+  # scripts/bootstrap.sh creates the bucket and writes backend.tf.
 }
 
 provider "google" {

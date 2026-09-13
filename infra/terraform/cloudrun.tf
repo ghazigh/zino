@@ -82,40 +82,35 @@ resource "google_cloud_run_v2_service" "webui" {
         value = google_storage_bucket.files.name
       }
 
-      # --- Firebase Auth as the OIDC identity provider ---
+      # --- Login ---
+      # Off by default: Open WebUI's own email/password accounts are used, which
+      # need no configuration at all. When enable_oidc is true these switch the
+      # app to Firebase Auth.
+      #
       # Unlike most settings, OAuth is NOT persisted to the database
       # (ENABLE_OAUTH_PERSISTENT_CONFIG defaults to false upstream), so these
-      # env vars stay authoritative on every boot. That is what we want: login
-      # config belongs in Terraform, not in a database row.
-      env {
-        name  = "ENABLE_OAUTH_SIGNUP"
-        value = "true"
-      }
-      env {
-        name  = "OAUTH_MERGE_ACCOUNTS_BY_EMAIL"
-        value = "true"
-      }
-      env {
-        name  = "OAUTH_PROVIDER_NAME"
-        value = "ZINO"
-      }
-      env {
-        name  = "OPENID_PROVIDER_URL"
-        value = "https://securetoken.google.com/${var.project_id}/.well-known/openid-configuration"
-      }
-      env {
-        name  = "OPENID_REDIRECT_URI"
-        value = "${local.public_url}/oauth/oidc/callback"
+      # env vars stay authoritative on every boot. Login config belongs in
+      # Terraform, not in a database row.
+      dynamic "env" {
+        for_each = var.enable_oidc ? {
+          ENABLE_OAUTH_SIGNUP           = "true"
+          OAUTH_MERGE_ACCOUNTS_BY_EMAIL = "true"
+          OAUTH_PROVIDER_NAME           = "ZINO"
+          OPENID_PROVIDER_URL           = "https://securetoken.google.com/${var.project_id}/.well-known/openid-configuration"
+          OPENID_REDIRECT_URI           = "${local.public_url}/oauth/oidc/callback"
+        } : {}
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
 
-      # Sourced from secrets Terraform does not own the value of. The OAuth pair
-      # stays empty until you add a version, and Open WebUI then falls back to
-      # its built-in email/password login.
+      # The OAuth client, from Secret Manager. Only present with enable_oidc.
       dynamic "env" {
-        for_each = {
+        for_each = var.enable_oidc ? {
           OAUTH_CLIENT_ID     = "oauth-client-id"
           OAUTH_CLIENT_SECRET = "oauth-client-secret"
-        }
+        } : {}
         content {
           name = env.key
           value_source {

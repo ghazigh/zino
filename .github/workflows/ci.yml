@@ -22,6 +22,21 @@ jobs:
           sed -i 's/^WEBUI_SECRET_KEY=$/WEBUI_SECRET_KEY=ci/' .env
           docker compose config --quiet
 
+  scripts:
+    name: Shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint deploy scripts
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          shellcheck -x scripts/*.sh
+      - name: Check scripts are executable
+        run: |
+          for f in scripts/bootstrap.sh scripts/deploy.sh scripts/enable-oidc.sh scripts/destroy.sh; do
+            test -x "$f" || { echo "$f is not executable"; exit 1; }
+          done
+
   terraform:
     name: Terraform fmt + validate
     runs-on: ubuntu-latest
