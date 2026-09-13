@@ -76,6 +76,27 @@ fi
 gcloud config set project "$PROJECT" >/dev/null
 ok "gcloud default project set"
 
+# Installing into a project that already runs something: say so plainly, and
+# check for the specific names ZINO is about to claim.
+EXISTING_RUN="$(gcloud run services list --project="$PROJECT" --format='value(metadata.name)' 2>/dev/null || true)"
+EXISTING_SQL="$(gcloud sql instances list --project="$PROJECT" --format='value(name)' 2>/dev/null || true)"
+if [[ -n "$EXISTING_RUN$EXISTING_SQL" ]]; then
+  warn "This project already contains resources:"
+  [[ -n "$EXISTING_RUN" ]] && warn "  Cloud Run: $(echo "$EXISTING_RUN" | tr '\n' ' ')"
+  [[ -n "$EXISTING_SQL" ]] && warn "  Cloud SQL: $(echo "$EXISTING_SQL" | tr '\n' ' ')"
+  warn "ZINO will ADD to it, not replace anything. Terraform only ever manages"
+  warn "what it created, so a later destroy cannot touch the above."
+
+  # A name clash is the one thing that would actually break, so fail early.
+  echo "$EXISTING_RUN" | grep -qx "zino-webui" \
+    && die "a Cloud Run service named 'zino-webui' already exists here. Use a different project."
+  echo "$EXISTING_SQL" | grep -qx "zino-pg" \
+    && die "a Cloud SQL instance named 'zino-pg' already exists here. Use a different project."
+  ok "no name conflicts"
+
+  confirm "Install ZINO into this existing project?" || die "aborted"
+fi
+
 # --- Billing ----------------------------------------------------------------
 # Nothing below works without billing: Cloud Run, Cloud SQL and Secret Manager
 # all refuse to enable on an unbilled project.
