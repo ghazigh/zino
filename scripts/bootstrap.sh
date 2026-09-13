@@ -196,6 +196,20 @@ ok "wrote infra/terraform/backend.tf"
 
 if [[ -f "$TFDIR/terraform.tfvars" ]]; then
   warn "infra/terraform/terraform.tfvars already exists — leaving it alone"
+  # A tfvars written by an older version of this script silently keeps its old
+  # settings forever. Name what is missing rather than let that go unnoticed.
+  MISSING=""
+  for key in project_id region domain enable_oidc min_instances cpu memory; do
+    grep -qE "^[[:space:]]*${key}[[:space:]]*=" "$TFDIR/terraform.tfvars" || MISSING="$MISSING $key"
+  done
+  if [[ -n "$MISSING" ]]; then
+    warn "  it does not set:$MISSING"
+    warn "  Terraform will use the defaults for those, which are the cheap ones."
+    warn "  To regenerate it with every setting spelled out and explained:"
+    warn "    rm $TFDIR/terraform.tfvars && $0 --project $PROJECT"
+  else
+    ok "it sets every current option"
+  fi
 else
   cat > "$TFDIR/terraform.tfvars" <<EOF
 project_id = "$PROJECT"
