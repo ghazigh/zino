@@ -19,6 +19,11 @@ resource "google_cloud_run_v2_service" "webui" {
   # Firebase Hosting fronts this; it reaches Cloud Run over Google's network.
   ingress = "INGRESS_TRAFFIC_ALL"
 
+  # This service is disposable — every byte worth keeping is in Cloud SQL or
+  # GCS, which carry their own protection. Leaving this on (the provider
+  # default) would make `terraform destroy` fail halfway.
+  deletion_protection = false
+
   template {
     service_account = google_service_account.webui.email
 

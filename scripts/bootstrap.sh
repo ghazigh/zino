@@ -141,8 +141,6 @@ gcloud services enable \
   secretmanager.googleapis.com \
   storage.googleapis.com \
   iamcredentials.googleapis.com \
-  servicenetworking.googleapis.com \
-  compute.googleapis.com \
   firebase.googleapis.com \
   firebasehosting.googleapis.com \
   identitytoolkit.googleapis.com \

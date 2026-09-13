@@ -29,12 +29,21 @@ resource "google_sql_database_instance" "main" {
     }
 
     ip_configuration {
-      # No public IP. Cloud Run reaches the instance over the Cloud SQL
-      # connector, so nothing needs to be exposed to the internet.
-      ipv4_enabled = false
-      # Private IP requires a VPC peering; for a single-host personal setup the
-      # connector-only path below is simpler and is what Cloud Run uses.
-      private_network = google_compute_network.main.id
+      # The instance has a public address but no authorised networks, so no
+      # host on the internet may open a connection to it. The only way in is
+      # Cloud Run's Cloud SQL connector, which authenticates as this project's
+      # service account through the Cloud SQL Admin API.
+      #
+      # Private IP would be tighter still, but Cloud Run's socket connector
+      # cannot route to a private-only instance unless the service also has
+      # Direct VPC egress into the same network. Adding that is the upgrade
+      # path; without it the deploy succeeds and the app cannot reach its
+      # database.
+      ipv4_enabled        = true
+      authorized_networks = []
+
+      # Reject any connection that is not TLS.
+      ssl_mode = "ENCRYPTED_ONLY"
     }
 
     maintenance_window {
@@ -48,10 +57,7 @@ resource "google_sql_database_instance" "main" {
     }
   }
 
-  depends_on = [
-    google_project_service.required,
-    google_service_networking_connection.main,
-  ]
+  depends_on = [google_project_service.required]
 }
 
 resource "google_sql_database" "zino" {

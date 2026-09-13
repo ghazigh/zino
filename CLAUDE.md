@@ -55,6 +55,17 @@ works — prefer asking a tool to identify itself.
 It idles out after ~20 minutes and `terraform apply` on Cloud SQL is slow.
 **Fix:** re-run `./scripts/deploy.sh`. Terraform picks up where it stopped.
 
+### Cloud SQL is public-IP with no authorised networks
+
+Deliberate, not an oversight. Cloud Run's Cloud SQL socket connector cannot
+route to a private-IP-only instance unless the service also has Direct VPC
+egress. With private IP and no VPC egress, `terraform apply` succeeds and the
+app then cannot reach its database — a plan cannot catch this, because nothing
+is syntactically wrong.
+
+If tightening this later: add `vpc_access` with Direct VPC egress to the Cloud
+Run service *first*, then flip `ipv4_enabled` to false.
+
 ## Communication
 
 The user prefers **brief, plain-language, step-by-step** answers — short

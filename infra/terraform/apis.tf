@@ -10,7 +10,6 @@ locals {
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
     "identitytoolkit.googleapis.com",
-    "compute.googleapis.com",
   ]
 }
 

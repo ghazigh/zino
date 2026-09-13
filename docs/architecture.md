@@ -87,6 +87,14 @@ These are real and deliberate, not oversights:
   `min_instances = 1` to undo it. See [cost.md](cost.md).
 - **Cloud SQL is the cost floor.** It runs 24/7 and cannot scale to zero, so it
   is most of the bill on a lightly used deployment.
+- **The database has a public address but no authorised networks.** Nothing on
+  the internet can open a connection; the only route in is Cloud Run's Cloud SQL
+  connector, authenticating as the service account, over TLS only
+  (`ssl_mode = ENCRYPTED_ONLY`). Private IP would be tighter, but Cloud Run's
+  socket connector cannot reach a private-only instance without Direct VPC
+  egress on the service — that is the upgrade path, and skipping it silently
+  is how you get a deploy that succeeds and an app that cannot reach its
+  database.
 - **Secrets depend on `WEBUI_SECRET_KEY`.** Provider API keys are encrypted with
   it. Rotating it invalidates all of them.
 - **Login is email/password until you opt in.** Firebase Auth needs an OAuth
