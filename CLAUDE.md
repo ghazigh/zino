@@ -8,25 +8,29 @@ Project: `zino-508515`. Region: `europe-west1`.
 
 ## Known gotchas — tell the user the fix when these appear
 
-### Terraform says credentials are missing / expired
+### Terraform: "invalid token JSON from metadata"
 
-Cloud Shell writes Application Default Credentials under `/tmp`, which is
-cleared between sessions. The cloned repo in `$HOME` persists, so it looks like
-nothing changed — but Terraform has lost its login.
+**Re-running `gcloud auth application-default login` does NOT fix this.** That
+was the first guess and it is wrong — worth stating plainly, because the error
+looks exactly like an expired login.
 
-**Fix:** re-run, and answer `y` to both prompts.
+Terraform's Google library does not honour `CLOUDSDK_CONFIG`. Its chain is
+`GOOGLE_APPLICATION_CREDENTIALS`, then `~/.config/gcloud/`, then the GCE
+metadata server. Cloud Shell relocates gcloud's config dir into `/tmp`, so the
+file the login writes is not where Terraform looks; it falls through to the
+metadata server and fails there. Logging in again just rewrites the same
+ignored file.
+
+**Fix:** `require_adc` in `scripts/lib.sh` locates the file and exports
+`GOOGLE_APPLICATION_CREDENTIALS`. By hand it is:
 
 ```sh
-gcloud auth application-default login
+export GOOGLE_APPLICATION_CREDENTIALS="$CLOUDSDK_CONFIG/application_default_credentials.json"
 ```
 
-Notes for explaining it:
-- gcloud says *"it is not necessary to use this command"*. That is true for
-  gcloud, false for Terraform, which reads a separate credential set.
-- It may offer to enable `cloudresourcemanager.googleapis.com`. That is free and
-  expected.
-- The verification code pasted back is a one-time key to the account. It should
-  never be pasted anywhere except that prompt.
+The general lesson: when a tool reports a credential error, check *which*
+credential source it actually reached before assuming the credential is stale.
+"from metadata" in that message was the whole clue.
 
 ### A script appears to hang with no output
 

@@ -63,9 +63,18 @@ reproducible.
      it is free and only lets tools read your project list.
 
    > **This does not survive a Cloud Shell restart.** The credentials are
-   > written under `/tmp`, which Cloud Shell clears between sessions. If you
-   > come back later and Terraform complains about credentials, just run this
-   > command again. Your cloned repo, in your home directory, does persist.
+   > written under `/tmp`, which Cloud Shell clears between sessions. Your
+   > cloned repo, in your home directory, does persist.
+   >
+   > Cloud Shell also writes them to a path Terraform does not check, so
+   > Terraform would otherwise fall through to the VM's metadata server and
+   > fail with `invalid token JSON from metadata`. The ZINO scripts find the
+   > file and point Terraform at it, so this is handled — but if you run
+   > `terraform` directly, set it yourself:
+   >
+   > ```sh
+   > export GOOGLE_APPLICATION_CREDENTIALS="$CLOUDSDK_CONFIG/application_default_credentials.json"
+   > ```
 
    The verification code you paste back is a one-time key to your account.
    Never paste it anywhere but that prompt.

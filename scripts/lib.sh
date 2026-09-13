@@ -38,17 +38,44 @@ require_terraform() {
   fi
 }
 
-# Terraform authenticates through Application Default Credentials, which are
-# separate from gcloud's own login. In Cloud Shell they live under /tmp and are
-# cleared between sessions, so this goes stale on a reconnect while everything
-# else still looks fine.
+# Point Terraform at the Application Default Credentials file.
+#
+# Terraform's Google library does not honour CLOUDSDK_CONFIG. Its chain is
+# GOOGLE_APPLICATION_CREDENTIALS, then ~/.config/gcloud/..., then the GCE
+# metadata server. Cloud Shell relocates gcloud's config dir into /tmp, so the
+# file `gcloud auth application-default login` writes is NOT where Terraform
+# looks — it falls through to the metadata server instead, and fails there with
+# an opaque "invalid token JSON from metadata" that re-running the login can
+# never fix, because gcloud keeps writing to the path Terraform ignores.
+#
+# So find the file and name it explicitly.
 require_adc() {
-  if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
-    printf '%serror%s %s\n' "$RED" "$OFF" "Terraform has no Google credentials." >&2
-    printf '\n    gcloud auth application-default login\n\n' >&2
-    printf '%s\n' "Run that (answer y), then re-run this script." >&2
-    exit 1
+  if [[ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" && -r "${GOOGLE_APPLICATION_CREDENTIALS}" ]]; then
+    ok "using credentials at $GOOGLE_APPLICATION_CREDENTIALS"
+    return
   fi
+
+  local candidates=() config_dir adc
+  # Where Cloud Shell puts it.
+  [[ -n "${CLOUDSDK_CONFIG:-}" ]] && candidates+=("$CLOUDSDK_CONFIG/application_default_credentials.json")
+  # Ask gcloud itself, in case neither guess is right.
+  config_dir="$(gcloud info --format='value(config.paths.global_config_dir)' 2>/dev/null || true)"
+  [[ -n "$config_dir" ]] && candidates+=("$config_dir/application_default_credentials.json")
+  # The standard location, used everywhere that is not Cloud Shell.
+  candidates+=("$HOME/.config/gcloud/application_default_credentials.json")
+
+  for adc in "${candidates[@]}"; do
+    if [[ -r "$adc" ]]; then
+      export GOOGLE_APPLICATION_CREDENTIALS="$adc"
+      ok "credentials found at $adc"
+      return
+    fi
+  done
+
+  printf '%serror%s %s\n' "$RED" "$OFF" "Could not find Application Default Credentials." >&2
+  printf '\n    gcloud auth application-default login\n\n' >&2
+  printf '%s\n' "Run that (answer y), then re-run this script." >&2
+  exit 1
 }
 
 # Repository root, regardless of where the script was invoked from.
