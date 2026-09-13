@@ -23,11 +23,9 @@ resource "google_cloud_run_v2_service" "webui" {
     service_account = google_service_account.webui.email
 
     scaling {
-      # One warm instance: Open WebUI holds chat websockets, so scaling to zero
-      # drops live streams. max=1 because multi-instance websocket fan-out needs
-      # Redis (WEBSOCKET_MANAGER=redis) — see ADR 0002.
-      min_instance_count = 1
-      max_instance_count = 1
+      # Defaults to scale-to-zero: nothing is billed while idle. See docs/cost.md.
+      min_instance_count = var.min_instances
+      max_instance_count = var.max_instances
     }
 
     volumes {
@@ -47,12 +45,19 @@ resource "google_cloud_run_v2_service" "webui" {
 
       resources {
         limits = {
-          cpu    = "2"
-          memory = "4Gi"
+          cpu    = var.cpu
+          memory = var.memory
         }
-        # Required with min_instance_count > 0 so the warm instance stays
-        # responsive instead of being throttled between requests.
-        cpu_idle = false
+        # cpu_idle = true is request-based billing: CPU is charged only while a
+        # request is in flight, which is what makes scale-to-zero cheap. It is
+        # forced off when instances are kept warm, since a throttled warm
+        # instance is the worst of both — paid for, and still slow to respond.
+        cpu_idle = var.min_instances == 0
+
+        # Extra CPU during container startup only. It is what keeps a
+        # scale-to-zero cold start tolerable, and is billed for those seconds
+        # alone — so with min_instances = 0 it is close to free.
+        startup_cpu_boost = true
       }
 
       env {

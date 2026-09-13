@@ -207,6 +207,15 @@ domain = ""
 # Login: Open WebUI's own accounts. Switch to Firebase Auth with
 # ./scripts/enable-oidc.sh once you want Google sign-in.
 enable_oidc = false
+
+# Sizing. Defaults are the cheapest useful setup: the server shuts down when
+# nobody is using it, so you pay only for the database while idle.
+# The cost of that is a ~30-60s wait on the first message after a quiet spell.
+# Set min_instances = 1 to make it always instant — see docs/cost.md for what
+# that costs before you do.
+min_instances = 0
+cpu           = "1"
+memory        = "2Gi"
 EOF
   ok "wrote infra/terraform/terraform.tfvars"
 fi

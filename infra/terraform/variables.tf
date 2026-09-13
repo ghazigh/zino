@@ -47,3 +47,47 @@ variable "enable_oidc" {
   type        = bool
   default     = false
 }
+
+# --- Sizing -----------------------------------------------------------------
+# Defaults are tuned for lowest cost on a personal platform with a handful of
+# users. See docs/cost.md before changing them.
+
+variable "min_instances" {
+  description = <<-EOT
+    Warm Cloud Run instances. 0 means the service scales to zero when unused and
+    costs nothing while idle, at the price of a cold start (roughly 30-60s)
+    on the first request after a quiet period.
+
+    Set to 1 to keep it always responsive; that is the single biggest line on
+    the bill, so do it deliberately.
+  EOT
+  type        = number
+  default     = 0
+}
+
+variable "max_instances" {
+  description = <<-EOT
+    Must stay at 1. Open WebUI holds chat websockets, and fanning those across
+    instances needs Redis (WEBSOCKET_MANAGER=redis), which ZINO does not run.
+    A second instance would drop live streams rather than share load.
+  EOT
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.max_instances == 1
+    error_message = "max_instances must be 1 until Redis is added for websocket fan-out."
+  }
+}
+
+variable "cpu" {
+  description = "vCPU per instance. With min_instances = 0 this is billed only while serving, so a larger value mostly buys faster cold starts rather than a bigger bill."
+  type        = string
+  default     = "1"
+}
+
+variable "memory" {
+  description = "Memory per instance. Open WebUI loads a local embedding model for RAG, so below 2Gi it starts failing on knowledge-base queries."
+  type        = string
+  default     = "2Gi"
+}

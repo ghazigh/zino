@@ -89,6 +89,7 @@ To tear it all down: `./scripts/destroy.sh`.
 | `docs/configuring.md` | Where config lives, and why |
 | `docs/architecture.md` | How it fits together |
 | `docs/adr/` | Decisions, and why |
+| `docs/cost.md` | What it costs, and the levers |
 | `docs/deploy-from-browser.md` | Deploying from Cloud Shell, no local installs |
 | `docs/upgrading.md` | Taking a new Open WebUI release |
 
@@ -102,6 +103,7 @@ against Google — the control flow, idempotency and generated files are verifie
 the cloud-side command syntax is not. Expect the first `bootstrap.sh` run to
 need a fix or two.
 
-Known limits are in [docs/architecture.md](docs/architecture.md#known-limits).
-The one to read first: an always-warm Cloud Run instance sets a monthly cost
-floor.
+Known limits are in [docs/architecture.md](docs/architecture.md#known-limits),
+and [docs/cost.md](docs/cost.md) has the money. Configured to scale to zero:
+roughly $10-25/month, mostly the database, with a ~30-60s cold start on the
+first request after a quiet spell.

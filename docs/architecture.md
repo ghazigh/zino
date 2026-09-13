@@ -77,13 +77,16 @@ configured with daily backups and 7-day point-in-time recovery.
 
 These are real and deliberate, not oversights:
 
-- **`zino-webui` is capped at one instance.** Open WebUI holds websockets for
-  chat streaming; fanning those out across instances needs Redis
-  (`WEBSOCKET_MANAGER=redis`). Until that exists, more than one instance would
-  drop streams. One instance is correct for a personal platform.
-- **That instance stays warm**, which is the platform's cost floor. Scaling to
-  zero would drop live streams and add a slow cold start to every first message.
-  This is the single biggest line on the bill.
+- **`zino-webui` is capped at one instance**, and Terraform validates it.
+  Open WebUI holds websockets for chat streaming; fanning those out across
+  instances needs Redis (`WEBSOCKET_MANAGER=redis`). A second instance would
+  drop streams rather than share load. One instance handles several concurrent
+  users fine.
+- **It scales to zero by default**, so the first request after a quiet spell
+  waits ~30-60s for a cold start. That is a deliberate trade for cost; set
+  `min_instances = 1` to undo it. See [cost.md](cost.md).
+- **Cloud SQL is the cost floor.** It runs 24/7 and cannot scale to zero, so it
+  is most of the bill on a lightly used deployment.
 - **Secrets depend on `WEBUI_SECRET_KEY`.** Provider API keys are encrypted with
   it. Rotating it invalidates all of them.
 - **Login is email/password until you opt in.** Firebase Auth needs an OAuth
