@@ -23,6 +23,7 @@ TFDIR="$ROOT/infra/terraform"
 
 need gcloud    "Install: https://cloud.google.com/sdk/docs/install"
 require_terraform
+require_adc
 need npx       "Install Node.js 18+: https://nodejs.org"
 
 [[ -f "$TFDIR/backend.tf" ]] \
@@ -37,7 +38,18 @@ info "Project: $PROJECT"
 # --- Infrastructure ---------------------------------------------------------
 
 info "terraform init"
-terraform -chdir="$TFDIR" init -input=false
+if ! terraform -chdir="$TFDIR" init -input=false; then
+  echo
+  warn "terraform init failed."
+  warn "If the error above mentions oauth2, a token, or credentials, this"
+  warn "Cloud Shell session lost its Terraform login — it is kept under /tmp,"
+  warn "which Cloud Shell clears on reconnect. Fix with:"
+  echo
+  echo "    gcloud auth application-default login"
+  echo
+  warn "then re-run this script. Nothing has been created."
+  exit 1
+fi
 
 info "terraform plan"
 # Plan to a file so what you approve is exactly what gets applied — with a bare

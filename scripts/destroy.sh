@@ -11,6 +11,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 ROOT="$(repo_root)"
 TFDIR="$ROOT/infra/terraform"
 require_terraform
+require_adc
 
 PROJECT="$(grep -E '^project_id' "$TFDIR/terraform.tfvars" 2>/dev/null | cut -d'"' -f2 || true)"
 [[ -n "$PROJECT" ]] || die "no terraform.tfvars — nothing to destroy"

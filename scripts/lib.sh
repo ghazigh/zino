@@ -38,6 +38,19 @@ require_terraform() {
   fi
 }
 
+# Terraform authenticates through Application Default Credentials, which are
+# separate from gcloud's own login. In Cloud Shell they live under /tmp and are
+# cleared between sessions, so this goes stale on a reconnect while everything
+# else still looks fine.
+require_adc() {
+  if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
+    printf '%serror%s %s\n' "$RED" "$OFF" "Terraform has no Google credentials." >&2
+    printf '\n    gcloud auth application-default login\n\n' >&2
+    printf '%s\n' "Run that (answer y), then re-run this script." >&2
+    exit 1
+  fi
+}
+
 # Repository root, regardless of where the script was invoked from.
 repo_root() {
   git -C "$(dirname "${BASH_SOURCE[0]}")" rev-parse --show-toplevel
