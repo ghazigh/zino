@@ -15,16 +15,6 @@ variable "openwebui_version" {
   default     = "v0.9.6"
 }
 
-variable "agents_image" {
-  description = <<-EOT
-    Full image reference for the ZINO agent gateway, including digest or tag.
-    CI overrides this per deploy; the default only exists so `terraform plan`
-    works before the first image is pushed.
-  EOT
-  type        = string
-  default     = ""
-}
-
 variable "domain" {
   description = "Custom domain served by Firebase Hosting, e.g. zino.example.com. Empty to use the default Firebase domain."
   type        = string
@@ -41,16 +31,4 @@ variable "github_repository" {
   description = "owner/repo allowed to deploy via Workload Identity Federation."
   type        = string
   default     = "ghazigh/zino"
-}
-
-variable "upstream_model" {
-  description = "Default model the ZINO assistant agent calls."
-  type        = string
-  default     = "gpt-4o-mini"
-}
-
-variable "upstream_base_url" {
-  description = "OpenAI-compatible base URL the agents call."
-  type        = string
-  default     = "https://api.openai.com/v1"
 }

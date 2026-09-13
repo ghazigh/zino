@@ -33,8 +33,9 @@ check that nothing we depend on moved.
    make clean && make up
    ```
 
-   Then check: login works, the `zino-echo` model appears in the picker and
-   streams, file upload works, and a RAG query returns results.
+   Then check: login works, your model connections still respond, an agent you
+   built still appears and streams, file upload works, and a query against a
+   knowledge base returns results.
 
 5. **Apply.** `make tf-apply`, then watch the Cloud Run revision come up. If the
    startup probe fails, the old revision keeps serving — Cloud Run will not shift
@@ -55,11 +56,11 @@ grep -n "STORAGE_PROVIDER\|VECTOR_DB\|OPENID_PROVIDER_URL" backend/open_webui/co
 The keys ZINO depends on, verified against **v0.9.6**:
 
 `DATABASE_URL`, `VECTOR_DB`, `PGVECTOR_DB_URL`, `STORAGE_PROVIDER`,
-`GCS_BUCKET_NAME`, `ENABLE_OPENAI_API`, `OPENAI_API_BASE_URLS`,
-`OPENAI_API_KEYS`, `WEBUI_NAME`, `WEBUI_SECRET_KEY`, `WEBUI_URL`,
+`GCS_BUCKET_NAME`, `WEBUI_NAME`, `WEBUI_SECRET_KEY`, `WEBUI_URL`,
 `ENABLE_OAUTH_SIGNUP`, `OAUTH_CLIENT_ID`, `OAUTH_CLIENT_SECRET`,
 `OPENID_PROVIDER_URL`, `OPENID_REDIRECT_URI`, `OAUTH_MERGE_ACCOUNTS_BY_EMAIL`.
 
-> `OPENAI_API_BASE_URLS` and `OPENAI_API_KEYS` are **semicolon**-separated lists,
-> and the two lists are matched by position. Adding a provider means adding an
-> entry to both.
+Also check that `ENABLE_PERSISTENT_CONFIG` still defaults to true and
+`ENABLE_OAUTH_PERSISTENT_CONFIG` still defaults to false. ZINO relies on that
+split: app settings come from the database, login settings from env. If it ever
+flips, login config would start being overridden by stale database rows.

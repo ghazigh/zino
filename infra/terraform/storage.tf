@@ -1,4 +1,7 @@
 # Object storage for Open WebUI uploads (STORAGE_PROVIDER=gcs).
+#
+# There is no Artifact Registry here: ZINO ships no container of its own, it
+# runs the upstream image straight from ghcr.io.
 
 resource "google_storage_bucket" "files" {
   name                        = "${var.project_id}-zino-files"
@@ -19,24 +22,6 @@ resource "google_storage_bucket" "files" {
     }
     action {
       type = "Delete"
-    }
-  }
-
-  depends_on = [google_project_service.required]
-}
-
-resource "google_artifact_registry_repository" "images" {
-  location      = var.region
-  repository_id = "zino"
-  description   = "ZINO container images"
-  format        = "DOCKER"
-
-  # Keep the registry from growing without bound as CI pushes every commit.
-  cleanup_policies {
-    id     = "keep-recent"
-    action = "KEEP"
-    most_recent_versions {
-      keep_count = 10
     }
   }
 

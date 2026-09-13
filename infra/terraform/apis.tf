@@ -5,7 +5,6 @@ locals {
     "run.googleapis.com",
     "sqladmin.googleapis.com",
     "secretmanager.googleapis.com",
-    "artifactregistry.googleapis.com",
     "storage.googleapis.com",
     "iamcredentials.googleapis.com",
     "firebase.googleapis.com",

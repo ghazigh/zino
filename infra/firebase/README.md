@@ -45,5 +45,6 @@ account to register becomes the administrator.
 
 - **Firestore** — ZINO's state is relational and already lives in Cloud SQL.
   Adding Firestore would split the source of truth for no gain.
-- **Cloud Functions** — the agent gateway is a Cloud Run service, so it shares
-  one deployment path and one language with the rest of the platform.
+- **Cloud Functions** — ZINO deploys no code of its own. Agents and tools are
+  authored inside Open WebUI and stored in its database (`docs/configuring.md`),
+  so there is nothing for a function to run.

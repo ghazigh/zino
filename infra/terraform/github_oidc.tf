@@ -41,11 +41,12 @@ resource "google_service_account_iam_member" "deployer_wif" {
   member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/${var.github_repository}"
 }
 
+# ZINO builds no images, so CI never pushes to a registry and never deploys a
+# Cloud Run revision — `terraform apply` does that. All CI publishes is the
+# Firebase Hosting config, so that is the only role the deployer gets.
 resource "google_project_iam_member" "deployer" {
   for_each = toset([
-    "roles/run.developer",           # deploy new revisions
-    "roles/artifactregistry.writer", # push images
-    "roles/iam.serviceAccountUser",  # act as the runtime service accounts
+    "roles/firebasehosting.admin",
   ])
 
   project = var.project_id

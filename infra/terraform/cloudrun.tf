@@ -1,101 +1,16 @@
-# Two Cloud Run services: upstream Open WebUI, and the ZINO agent gateway.
+# One Cloud Run service: the upstream Open WebUI image, unmodified.
+#
+# Model providers and agents are NOT configured here. Open WebUI persists those
+# in its own database (ENABLE_PERSISTENT_CONFIG defaults to true), so they are
+# set once through the admin UI and survive every redeploy. Putting them in env
+# would only seed the very first boot and then be silently overridden — see
+# docs/configuring.md.
 
 locals {
-  agents_url = google_cloud_run_v2_service.agents.uri
-
-  # Placeholder keeps `terraform plan` working before CI has pushed a real
-  # image; CI passes -var agents_image=<digest> on every deploy.
-  agents_image = var.agents_image != "" ? var.agents_image : "us-docker.pkg.dev/cloudrun/container/hello"
-
   # Where users actually reach ZINO. Firebase Hosting serves the custom domain
   # when one is set, otherwise the project's default Firebase domain.
   public_url = var.domain != "" ? "https://${var.domain}" : "https://${var.project_id}.web.app"
 }
-
-# --- ZINO agent gateway -----------------------------------------------------
-
-resource "google_cloud_run_v2_service" "agents" {
-  name     = "zino-agents"
-  location = var.region
-
-  # Ingress is open because Open WebUI authenticates to this gateway with a
-  # bearer token (its "OpenAI API key"), not a Google-signed ID token — so
-  # Cloud Run IAM cannot be the gate here. The gate is ZINO_API_KEY, which the
-  # gateway compares in constant time and which fails closed when unset in
-  # production. To close ingress instead, put the WebUI service on Direct VPC
-  # egress and reach this one over an internal load balancer.
-  ingress = "INGRESS_TRAFFIC_ALL"
-
-  template {
-    service_account = google_service_account.agents.email
-
-    scaling {
-      min_instance_count = 0
-      max_instance_count = 3
-    }
-
-    containers {
-      image = local.agents_image
-
-      resources {
-        limits = {
-          cpu    = "1"
-          memory = "512Mi"
-        }
-      }
-
-      env {
-        name  = "ZINO_ENV"
-        value = "production"
-      }
-      env {
-        name  = "ZINO_UPSTREAM_BASE_URL"
-        value = var.upstream_base_url
-      }
-      env {
-        name  = "ZINO_UPSTREAM_MODEL"
-        value = var.upstream_model
-      }
-      env {
-        name = "ZINO_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.managed["gateway-api-key"].secret_id
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "ZINO_UPSTREAM_API_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = google_secret_manager_secret.unmanaged["upstream-api-key"].secret_id
-            version = "latest"
-          }
-        }
-      }
-
-      startup_probe {
-        http_get {
-          path = "/healthz"
-        }
-        initial_delay_seconds = 5
-        period_seconds        = 5
-        failure_threshold     = 6
-      }
-    }
-  }
-
-  lifecycle {
-    # CI deploys new revisions by image; do not let `terraform apply` roll the
-    # service back to whatever tag is in the tfvars.
-    ignore_changes = [template[0].containers[0].image, client, client_version]
-  }
-
-  depends_on = [google_project_service.required]
-}
-
-# --- Open WebUI -------------------------------------------------------------
 
 resource "google_cloud_run_v2_service" "webui" {
   name     = "zino-webui"
@@ -153,7 +68,7 @@ resource "google_cloud_run_v2_service" "webui" {
         value = local.public_url
       }
 
-      # State lives in Cloud SQL and GCS, never on the container filesystem.
+      # --- State: none of it on the container filesystem ---
       env {
         name  = "VECTOR_DB"
         value = "pgvector"
@@ -167,21 +82,11 @@ resource "google_cloud_run_v2_service" "webui" {
         value = google_storage_bucket.files.name
       }
 
-      # ZINO agents, registered as an OpenAI-compatible provider.
-      env {
-        name  = "ENABLE_OPENAI_API"
-        value = "true"
-      }
-      env {
-        name  = "OPENAI_API_BASE_URLS"
-        value = "${local.agents_url}/v1"
-      }
-      env {
-        name  = "ENABLE_OLLAMA_API"
-        value = "false"
-      }
-
       # --- Firebase Auth as the OIDC identity provider ---
+      # Unlike most settings, OAuth is NOT persisted to the database
+      # (ENABLE_OAUTH_PERSISTENT_CONFIG defaults to false upstream), so these
+      # env vars stay authoritative on every boot. That is what we want: login
+      # config belongs in Terraform, not in a database row.
       env {
         name  = "ENABLE_OAUTH_SIGNUP"
         value = "true"
@@ -203,9 +108,9 @@ resource "google_cloud_run_v2_service" "webui" {
         value = "${local.public_url}/oauth/oidc/callback"
       }
 
-      # Sourced from secrets Terraform does not own the value of; the OAuth
-      # pair stays empty until you add a version, and Open WebUI then falls
-      # back to its built-in email/password login.
+      # Sourced from secrets Terraform does not own the value of. The OAuth pair
+      # stays empty until you add a version, and Open WebUI then falls back to
+      # its built-in email/password login.
       dynamic "env" {
         for_each = {
           OAUTH_CLIENT_ID     = "oauth-client-id"
@@ -227,7 +132,6 @@ resource "google_cloud_run_v2_service" "webui" {
           DATABASE_URL     = "database-url"
           PGVECTOR_DB_URL  = "database-url"
           WEBUI_SECRET_KEY = "webui-secret-key"
-          OPENAI_API_KEYS  = "gateway-api-key"
         }
         content {
           name = env.key
@@ -267,21 +171,11 @@ resource "google_cloud_run_v2_service" "webui" {
   ]
 }
 
-# Firebase Hosting terminates auth at the edge; Open WebUI does its own login,
-# so the Cloud Run service itself is public and WEBUI_AUTH stays on.
+# Firebase Hosting terminates nothing; Open WebUI does its own login, so the
+# Cloud Run service is publicly invocable and WEBUI_AUTH stays on.
 resource "google_cloud_run_v2_service_iam_member" "webui_public" {
   location = google_cloud_run_v2_service.webui.location
   name     = google_cloud_run_v2_service.webui.name
-  role     = "roles/run.invoker"
-  member   = "allUsers"
-}
-
-# Invocable without Google IAM for the reason given on `ingress` above. The
-# request is still rejected by the gateway unless it carries the correct
-# ZINO_API_KEY bearer token.
-resource "google_cloud_run_v2_service_iam_member" "agents_invoker" {
-  location = google_cloud_run_v2_service.agents.location
-  name     = google_cloud_run_v2_service.agents.name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }

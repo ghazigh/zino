@@ -3,19 +3,9 @@ output "webui_url" {
   value       = google_cloud_run_v2_service.webui.uri
 }
 
-output "agents_url" {
-  description = "Cloud Run URL of the ZINO agent gateway."
-  value       = google_cloud_run_v2_service.agents.uri
-}
-
 output "public_url" {
   description = "The address users actually visit."
   value       = local.public_url
-}
-
-output "artifact_registry" {
-  description = "Docker repository to push ZINO images to."
-  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${google_artifact_registry_repository.images.repository_id}"
 }
 
 output "sql_connection_name" {

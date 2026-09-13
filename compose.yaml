@@ -1,9 +1,13 @@
-# Local development stack. Mirrors the GCP topology (Postgres + pgvector, an
-# external agent gateway) so behaviour differences surface here, not in prod.
+# Local development stack. Mirrors the GCP topology (Postgres + pgvector) so
+# behaviour differences surface here, not in production.
 #
 #   cp .env.example .env && make up
 #
-# The one deliberate difference: storage is local disk, not GCS.
+# The one deliberate difference: file storage is local disk, not GCS.
+#
+# Model providers and agents are NOT configured here. Add them in the admin UI
+# once the stack is up — Open WebUI saves them to the database, so they persist
+# across restarts. See docs/configuring.md.
 
 name: zino
 
@@ -25,36 +29,13 @@ services:
       retries: 10
     restart: unless-stopped
 
-  zino-agents:
-    build:
-      context: ./services/zino-agents
-    environment:
-      ZINO_ENV: dev
-      ZINO_LOG_LEVEL: ${ZINO_LOG_LEVEL:-INFO}
-      ZINO_API_KEY: ${ZINO_API_KEY:?set ZINO_API_KEY in .env}
-      ZINO_UPSTREAM_BASE_URL: ${ZINO_UPSTREAM_BASE_URL:-https://api.openai.com/v1}
-      ZINO_UPSTREAM_API_KEY: ${ZINO_UPSTREAM_API_KEY:-}
-      ZINO_UPSTREAM_MODEL: ${ZINO_UPSTREAM_MODEL:-gpt-4o-mini}
-    ports:
-      # Exposed so you can curl the gateway directly while developing.
-      - "8080:8080"
-    healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8080/healthz').status==200 else 1)\""]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    restart: unless-stopped
-
   webui:
     # Pinned. Bump ZINO_OPENWEBUI_VERSION in .env to take an upstream release,
-    # and see docs/upgrading.md before you do.
+    # and read docs/upgrading.md before you do.
     image: ghcr.io/open-webui/open-webui:${ZINO_OPENWEBUI_VERSION:-v0.9.6}
     depends_on:
       db:
         condition: service_healthy
-      zino-agents:
-        condition: service_started
     environment:
       WEBUI_NAME: ZINO
       WEBUI_SECRET_KEY: ${WEBUI_SECRET_KEY:?set WEBUI_SECRET_KEY in .env}
@@ -66,15 +47,10 @@ services:
       # two are not silently coupled if the main database ever moves.
       PGVECTOR_DB_URL: postgresql://zino:${POSTGRES_PASSWORD:-zino-local-dev}@db:5432/zino
 
-      # Register the ZINO gateway as an OpenAI-compatible provider. Semicolons
-      # separate entries; add more pairs to expose additional providers.
-      ENABLE_OPENAI_API: "true"
-      OPENAI_API_BASE_URLS: http://zino-agents:8080/v1
-      OPENAI_API_KEYS: ${ZINO_API_KEY:?set ZINO_API_KEY in .env}
-
-      # No Ollama locally by default; flip on if you run one.
+      # No Ollama by default; flip on in .env if you run one locally.
       ENABLE_OLLAMA_API: ${ENABLE_OLLAMA_API:-false}
     volumes:
+      # Uploads only. Everything else lives in Postgres.
       - webui-data:/app/backend/data
     ports:
       - "3000:8080"

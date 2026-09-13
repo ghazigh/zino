@@ -28,14 +28,11 @@ Reusing the single Cloud SQL instance for both the app database and pgvector
 avoids a second stateful service; Open WebUI defaults `PGVECTOR_DB_URL` to
 `DATABASE_URL` for exactly this case.
 
-Two Cloud Run services, not one:
+One Cloud Run service, `zino-webui`, running the upstream Open WebUI image.
 
-- `zino-webui` — the upstream Open WebUI image.
-- `zino-agents` — ZINO's own agent gateway.
-
-They are deployed independently, scale independently, and hold different IAM
-service accounts, so a bug in an agent tool cannot reach the WebUI's database
-credentials.
+An earlier draft split this into two services, adding a ZINO-owned agent
+gateway. That was dropped (see the amendment to ADR 0001) — agents are authored
+in Open WebUI's own UI, so the second service had nothing left to do.
 
 ## Consequences
 

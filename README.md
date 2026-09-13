@@ -1,55 +1,47 @@
 # ZINO
 
-A personal agentic platform, built on [Open WebUI](https://github.com/open-webui/open-webui)
-and hosted on GCP + Firebase.
+A personal agentic platform: [Open WebUI](https://github.com/open-webui/open-webui)
+running on GCP + Firebase.
 
-Open WebUI supplies the chat product: the interface, accounts, history, RAG and
-file handling. ZINO supplies the agents — and the infrastructure that runs the
-whole thing.
+Open WebUI is the whole application — chat, accounts, history, RAG, file
+handling, and agent authoring. This repo is the infrastructure that runs it, and
+the record of why it is built this way.
 
----
-
-## How it fits together
-
-Open WebUI runs as the **unmodified upstream image**, pinned to `v0.9.6`. ZINO
-is everything around it, and plugs in through the OpenAI API shape: the agent
-gateway serves `/v1/models` and `/v1/chat/completions`, so each ZINO agent shows
-up in Open WebUI's model picker like any other model.
-
-That seam is the point. Upgrading upstream is a version bump, not a merge.
-See [ADR 0001](docs/adr/0001-base-strategy.md) for why, and
-[docs/architecture.md](docs/architecture.md) for the full picture.
+**There is no application code here, on purpose.** ZINO runs the upstream image
+unmodified, pinned to `v0.9.6`. Upgrading is a version bump, not a merge.
+See [ADR 0001](docs/adr/0001-base-strategy.md).
 
 ```
 browser → Firebase Hosting → Cloud Run: zino-webui (Open WebUI)
-                                   ├→ Cloud Run: zino-agents (this repo)
                                    ├→ Cloud SQL Postgres + pgvector
                                    └→ GCS bucket
 ```
 
 ## Run it locally
 
-Requires Docker and [uv](https://docs.astral.sh/uv/).
+Requires Docker.
 
 ```sh
-make setup          # creates .env, installs dev dependencies
-make secrets        # prints generated values — paste them into .env
-make up             # starts Open WebUI, Postgres+pgvector, and the gateway
+make setup      # creates .env
+make secrets    # prints a generated WEBUI_SECRET_KEY — paste it into .env
+make up         # starts Open WebUI + Postgres/pgvector
 ```
 
 ZINO is then at <http://localhost:3000>. The first account you register becomes
 the administrator.
 
-Pick the **ZINO Echo** model to confirm the wiring end to end — it needs no API
-key and streams your message back. For **ZINO Assistant**, set
-`ZINO_UPSTREAM_API_KEY` in `.env` first.
+## Connect a model, build an agent
 
-```sh
-make test           # 30 tests
-make lint
-make dev            # gateway alone, with reload, no Docker
-make help           # everything else
-```
+Both happen **in the app**, not in this repo:
+
+- **Admin Panel → Settings → Connections** — add an OpenAI-compatible provider
+  and its API key.
+- **Workspace → Models** — create an agent: system prompt, knowledge, tools.
+
+Open WebUI stores all of it in its database, so it survives restarts and
+redeploys. This is deliberate, and [docs/configuring.md](docs/configuring.md)
+explains the one rule that follows from it: settings changed in the UI override
+environment variables, so ZINO sets no model config in Terraform at all.
 
 ## Deploy it
 
@@ -59,49 +51,30 @@ cp terraform.tfvars.example terraform.tfvars   # set project_id
 terraform init && terraform apply
 ```
 
-Then the parts Terraform deliberately does not hold the values for:
-
-```sh
-# The model provider key the agents call.
-echo -n "sk-..." | gcloud secrets versions add zino-upstream-api-key --data-file=-
-```
-
-Set the three GitHub Actions repository variables from the Terraform outputs —
-`GCP_PROJECT_ID`, `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOYER_SA` — and
-pushes to `main` deploy themselves. CI authenticates with Workload Identity
-Federation, so no service-account key is ever created or stored.
-
-Firebase Hosting and Firebase Auth need a few console steps:
+Then the Firebase console steps for Hosting and Auth:
 [infra/firebase/README.md](infra/firebase/README.md).
 
-## Extending it
-
-**An agent** is a class with an async `run()` that yields events. Add a file
-under `services/zino-agents/zino_agents/agents/`, register it, and it is in the
-model picker.
-
-**A tool** is an async function with a JSON schema, registered with a decorator.
-`ZINO Assistant` picks it up automatically — it sends every registered tool to
-the model and runs a tool-calling loop over the results.
-
-Both are walked through in [docs/architecture.md](docs/architecture.md).
+CI authenticates with Workload Identity Federation, so no service-account key is
+ever created or stored.
 
 ## Repository map
 
 | Path | |
 |------|--|
-| `services/zino-agents/` | Agent gateway: agents, tools, OpenAI-compatible API |
 | `infra/terraform/` | The GCP footprint |
 | `infra/firebase/` | Hosting + Auth setup |
 | `compose.yaml` | Local stack, mirrors production |
+| `docs/configuring.md` | Where config lives, and why |
+| `docs/architecture.md` | How it fits together |
 | `docs/adr/` | Decisions, and why |
 | `docs/upgrading.md` | Taking a new Open WebUI release |
 
 ## Status
 
-Foundation. The platform runs locally and the infrastructure is defined, with
-two agents (`zino-echo`, `zino-assistant`) and two tools (`current_time`,
-`calculator`) as working reference implementations.
+Infrastructure is defined and internally consistent; the local stack runs.
 
-The Terraform and the workflows have not yet been run against a real GCP
-project — `terraform validate` and a first `apply` are the next step.
+**Not yet deployed.** Terraform has never been applied against a real GCP
+project — `terraform plan` is the next step, and the first run should be
+expected to surface errors. Known limits are in
+[docs/architecture.md](docs/architecture.md#known-limits); the one to read first
+is that a always-warm Cloud Run instance sets a monthly cost floor.

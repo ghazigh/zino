@@ -1,15 +1,13 @@
 # Secrets live in Secret Manager and are mounted into Cloud Run as environment
-# variables at deploy time. Values that Terraform generates are stored here;
-# values you supply (the model provider key) are created empty and filled in
-# out of band so they never enter Terraform state.
+# variables. Values Terraform generates are stored here; values you supply are
+# created empty and filled in out of band so they never enter Terraform state.
+#
+# Note what is NOT here: model provider API keys. Those are entered in the Open
+# WebUI admin UI and stored encrypted in its own database, so they are managed
+# where you manage the connections themselves.
 
 resource "random_password" "webui_secret_key" {
   length  = 64
-  special = false
-}
-
-resource "random_password" "gateway_api_key" {
-  length  = 48
   special = false
 }
 
@@ -17,15 +15,13 @@ locals {
   # Secrets Terraform owns the value of.
   managed_secrets = {
     webui-secret-key = random_password.webui_secret_key.result
-    gateway-api-key  = random_password.gateway_api_key.result
     database-url     = local.database_url
   }
 
-  # Secrets you populate yourself, so their values never enter Terraform state:
-  #   echo -n "sk-..." | gcloud secrets versions add zino-upstream-api-key --data-file=-
-  # The OAuth pair comes from the Firebase console (infra/firebase/README.md).
+  # Secrets you populate yourself, from the Firebase console
+  # (see infra/firebase/README.md):
+  #   echo -n "<client-id>" | gcloud secrets versions add zino-oauth-client-id --data-file=-
   unmanaged_secrets = [
-    "upstream-api-key",
     "oauth-client-id",
     "oauth-client-secret",
   ]
