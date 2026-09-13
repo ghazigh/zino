@@ -45,7 +45,10 @@ environment variables, so ZINO sets no model config in Terraform at all.
 
 ## Deploy it
 
-Two commands, from the terminal. No console clicking.
+**From a browser, with nothing installed:** use Cloud Shell —
+[docs/deploy-from-browser.md](docs/deploy-from-browser.md).
+
+**From your own machine:** two commands.
 
 ```sh
 gcloud auth login && gcloud auth application-default login
@@ -86,6 +89,7 @@ To tear it all down: `./scripts/destroy.sh`.
 | `docs/configuring.md` | Where config lives, and why |
 | `docs/architecture.md` | How it fits together |
 | `docs/adr/` | Decisions, and why |
+| `docs/deploy-from-browser.md` | Deploying from Cloud Shell, no local installs |
 | `docs/upgrading.md` | Taking a new Open WebUI release |
 
 ## Status
