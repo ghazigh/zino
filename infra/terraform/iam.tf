@@ -3,6 +3,9 @@
 resource "google_service_account" "webui" {
   account_id   = "zino-webui"
   display_name = "ZINO Open WebUI runtime"
+
+  # Creating a service account needs iam.googleapis.com to be on first.
+  depends_on = [google_project_service.required]
 }
 
 resource "google_project_iam_member" "webui_sql_client" {

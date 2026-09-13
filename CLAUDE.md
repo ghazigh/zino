@@ -70,6 +70,18 @@ is syntactically wrong.
 If tightening this later: add `vpc_access` with Direct VPC egress to the Cloud
 Run service *first*, then flip `ipv4_enabled` to false.
 
+### Cloud SQL edition must be pinned
+
+Cloud SQL defaults new Postgres instances to ENTERPRISE_PLUS, which rejects
+shared-core tiers. `edition = "ENTERPRISE"` in `sql.tf` is what makes
+db-f1-micro legal. If the tier ever changes, check it against the edition.
+
+### iam.googleapis.com vs iamcredentials.googleapis.com
+
+Different services, easily confused. `iam` creates service accounts and
+workload identity pools; `iamcredentials` mints short-lived tokens. Both are
+needed. Enabling only the second broke the first apply.
+
 ## Communication
 
 The user prefers **brief, plain-language, step-by-step** answers — short

@@ -32,6 +32,8 @@ resource "google_iam_workload_identity_pool_provider" "github" {
 resource "google_service_account" "deployer" {
   account_id   = "zino-deployer"
   display_name = "ZINO CI deployer"
+
+  depends_on = [google_project_service.required]
 }
 
 # Only workflow runs from our repository may impersonate the deployer.

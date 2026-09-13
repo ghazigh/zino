@@ -140,7 +140,9 @@ gcloud services enable \
   sqladmin.googleapis.com \
   secretmanager.googleapis.com \
   storage.googleapis.com \
+  iam.googleapis.com \
   iamcredentials.googleapis.com \
+  cloudresourcemanager.googleapis.com \
   firebase.googleapis.com \
   firebasehosting.googleapis.com \
   identitytoolkit.googleapis.com \

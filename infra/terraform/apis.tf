@@ -6,7 +6,13 @@ locals {
     "sqladmin.googleapis.com",
     "secretmanager.googleapis.com",
     "storage.googleapis.com",
+    # iam creates service accounts and workload identity pools.
+    # iamcredentials is a different service — it mints short-lived tokens.
+    # Both are needed; enabling only the second is what broke the first apply.
+    "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    # Project-level IAM bindings go through this one.
+    "cloudresourcemanager.googleapis.com",
     "firebase.googleapis.com",
     "firebasehosting.googleapis.com",
     "identitytoolkit.googleapis.com",

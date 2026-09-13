@@ -15,6 +15,10 @@ resource "google_sql_database_instance" "main" {
   deletion_protection = true
 
   settings {
+    # Must be set explicitly. Cloud SQL now defaults new Postgres instances to
+    # ENTERPRISE_PLUS, and db-f1-micro is a legacy shared-core tier that exists
+    # only in ENTERPRISE — the mismatch is rejected at create time.
+    edition           = "ENTERPRISE"
     tier              = var.db_tier
     availability_type = "ZONAL" # personal platform; REGIONAL doubles the cost
     disk_size         = 10

@@ -22,7 +22,14 @@ variable "domain" {
 }
 
 variable "db_tier" {
-  description = "Cloud SQL machine type. db-f1-micro is the cheapest and is adequate for a personal platform."
+  description = <<-EOT
+    Cloud SQL machine type. db-f1-micro is the cheapest and is adequate for a
+    personal platform.
+
+    Tied to the edition, which sql.tf pins to ENTERPRISE: shared-core tiers
+    (db-f1-micro, db-g1-small) exist only there. ENTERPRISE_PLUS requires a
+    db-perf-optimized-N-* tier and costs far more.
+  EOT
   type        = string
   default     = "db-f1-micro"
 }
