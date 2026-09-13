@@ -39,8 +39,12 @@ resource "google_sql_database_instance" "main" {
       # Direct VPC egress into the same network. Adding that is the upgrade
       # path; without it the deploy succeeds and the app cannot reach its
       # database.
-      ipv4_enabled        = true
-      authorized_networks = []
+      ipv4_enabled = true
+
+      # No `authorized_networks` block is declared, and that is the point:
+      # with none declared, no address range is permitted to open a connection.
+      # It is a block rather than an argument, so "allow nothing" is expressed
+      # by its absence, not by an empty list.
 
       # Reject any connection that is not TLS.
       ssl_mode = "ENCRYPTED_ONLY"

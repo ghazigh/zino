@@ -51,6 +51,14 @@ if ! terraform -chdir="$TFDIR" init -input=false; then
   exit 1
 fi
 
+# validate reports every schema error in one pass. plan can stop at the first,
+# which turns a handful of mistakes into a handful of round trips.
+info "terraform validate"
+if ! terraform -chdir="$TFDIR" validate; then
+  warn "The configuration has errors. Nothing has been created."
+  exit 1
+fi
+
 info "terraform plan"
 # Plan to a file so what you approve is exactly what gets applied — with a bare
 # `apply`, Terraform re-plans and could act on state that changed in between.
