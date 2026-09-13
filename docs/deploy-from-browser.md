@@ -51,6 +51,21 @@ reproducible.
 
    Follow the link it prints, approve, paste the code back.
 
+   Two things it says that look alarming and are not:
+
+   - *"it is not necessary to use this command"* — Cloud Shell already signs in
+     `gcloud`, but Terraform reads a different credential set. Answer **y**.
+   - It offers to enable `cloudresourcemanager.googleapis.com`. Answer **y**;
+     it is free and only lets tools read your project list.
+
+   > **This does not survive a Cloud Shell restart.** The credentials are
+   > written under `/tmp`, which Cloud Shell clears between sessions. If you
+   > come back later and Terraform complains about credentials, just run this
+   > command again. Your cloned repo, in your home directory, does persist.
+
+   The verification code you paste back is a one-time key to your account.
+   Never paste it anywhere but that prompt.
+
 6. Find your billing account ID:
 
    ```sh
