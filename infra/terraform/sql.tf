@@ -54,11 +54,6 @@ resource "google_sql_database_instance" "main" {
       day  = 7 # Sunday
       hour = 4
     }
-
-    database_flags {
-      name  = "max_connections"
-      value = "50"
-    }
   }
 
   depends_on = [google_project_service.required]
