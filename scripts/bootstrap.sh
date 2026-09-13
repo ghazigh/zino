@@ -78,8 +78,24 @@ ok "gcloud default project set"
 
 # Installing into a project that already runs something: say so plainly, and
 # check for the specific names ZINO is about to claim.
-EXISTING_RUN="$(gcloud run services list --project="$PROJECT" --format='value(metadata.name)' 2>/dev/null || true)"
-EXISTING_SQL="$(gcloud sql instances list --project="$PROJECT" --format='value(name)' 2>/dev/null || true)"
+#
+# Only ask about a service whose API is already on. Querying a disabled API
+# makes gcloud stop and ask whether to enable it — and with stderr hidden that
+# prompt is invisible, so the script looks frozen. --quiet belts-and-braces it.
+# A project with the API off cannot hold any of these resources anyway.
+ENABLED_APIS="$(gcloud services list --enabled --project="$PROJECT" \
+  --format='value(config.name)' --quiet 2>/dev/null || true)"
+
+EXISTING_RUN=""
+EXISTING_SQL=""
+if grep -qx 'run.googleapis.com' <<<"$ENABLED_APIS"; then
+  EXISTING_RUN="$(gcloud run services list --project="$PROJECT" \
+    --format='value(metadata.name)' --quiet 2>/dev/null || true)"
+fi
+if grep -qx 'sqladmin.googleapis.com' <<<"$ENABLED_APIS"; then
+  EXISTING_SQL="$(gcloud sql instances list --project="$PROJECT" \
+    --format='value(name)' --quiet 2>/dev/null || true)"
+fi
 if [[ -n "$EXISTING_RUN$EXISTING_SQL" ]]; then
   warn "This project already contains resources:"
   [[ -n "$EXISTING_RUN" ]] && warn "  Cloud Run: $(echo "$EXISTING_RUN" | tr '\n' ' ')"
