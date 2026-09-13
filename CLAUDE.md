@@ -82,6 +82,14 @@ Different services, easily confused. `iam` creates service accounts and
 workload identity pools; `iamcredentials` mints short-lived tokens. Both are
 needed. Enabling only the second broke the first apply.
 
+## Current state
+
+**ZINO runs locally via `./scripts/start.sh`. That is the supported path.**
+
+The GCP deployment in `infra/` is paused partway through its first
+`terraform apply` — see `docs/cloud-status.md` for exactly where and why.
+Nothing in GCP is billable right now. Do not present the cloud path as working.
+
 ## Communication
 
 The user prefers **brief, plain-language, step-by-step** answers — short

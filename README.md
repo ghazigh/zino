@@ -1,34 +1,39 @@
 # ZINO
 
 A personal agentic platform: [Open WebUI](https://github.com/open-webui/open-webui)
-running on GCP + Firebase.
+with your own models, agents and knowledge.
 
 Open WebUI is the whole application — chat, accounts, history, RAG, file
-handling, and agent authoring. This repo is the infrastructure that runs it, and
-the record of why it is built this way.
+handling, and agent authoring. This repo runs it, pinned to `v0.9.6`, and holds
+the decisions about how.
 
 **There is no application code here, on purpose.** ZINO runs the upstream image
-unmodified, pinned to `v0.9.6`. Upgrading is a version bump, not a merge.
+unmodified, so upgrading is a version bump rather than a merge.
 See [ADR 0001](docs/adr/0001-base-strategy.md).
 
-```
-browser → Firebase Hosting → Cloud Run: zino-webui (Open WebUI)
-                                   ├→ Cloud SQL Postgres + pgvector
-                                   └→ GCS bucket
-```
+---
 
-## Run it locally
+## Run it
 
-Requires Docker.
+Needs [Docker](https://docs.docker.com/get-started/get-docker/). Nothing else,
+no account, no cost.
 
 ```sh
-make setup      # creates .env
-make secrets    # prints a generated WEBUI_SECRET_KEY — paste it into .env
-make up         # starts Open WebUI + Postgres/pgvector
+git clone https://github.com/ghazigh/zino
+cd zino
+./scripts/start.sh
 ```
 
-ZINO is then at <http://localhost:3000>. The first account you register becomes
-the administrator.
+That generates your secret key, starts Open WebUI and its database, waits for
+it, and prints the address. First run pulls about 2GB.
+
+Then open <http://localhost:3000> and register — **the first account becomes the
+administrator**.
+
+```sh
+./scripts/start.sh --stop    # stop, keeping all your data
+./scripts/start.sh --logs    # see what it is doing
+```
 
 ## Connect a model, build an agent
 
@@ -38,72 +43,42 @@ Both happen **in the app**, not in this repo:
   and its API key.
 - **Workspace → Models** — create an agent: system prompt, knowledge, tools.
 
-Open WebUI stores all of it in its database, so it survives restarts and
-redeploys. This is deliberate, and [docs/configuring.md](docs/configuring.md)
-explains the one rule that follows from it: settings changed in the UI override
-environment variables, so ZINO sets no model config in Terraform at all.
+Open WebUI stores all of it in its database, so it survives restarts.
+[docs/configuring.md](docs/configuring.md) explains the one rule that follows:
+settings changed in the UI override environment variables, so ZINO deliberately
+sets no model config anywhere in this repo.
 
-## Deploy it
+> **Keep your `.env`.** The key in it encrypts the provider API keys you enter
+> in the admin UI. Lose it and you re-enter them all.
 
-**From a browser, with nothing installed:** use Cloud Shell —
-[docs/deploy-from-browser.md](docs/deploy-from-browser.md).
+## What you get locally
 
-**From your own machine:** two commands.
+Everything, with one difference from a server deployment: it is reachable only
+from your machine. Chat, agents, tools, file uploads, and RAG over your own
+documents (Postgres with pgvector, same as the cloud setup would use) all work.
 
-```sh
-gcloud auth login && gcloud auth application-default login
+Your data lives in Docker volumes and persists across restarts.
 
-./scripts/bootstrap.sh --project zino-prod --billing $(gcloud beta billing accounts list --format='value(ACCOUNT_ID)' | head -1)
-./scripts/deploy.sh
-```
+## Deploying it to the internet — optional
 
-`bootstrap.sh` creates the project, links billing, enables the APIs, creates the
-versioned bucket for Terraform state, and writes the Terraform config. It is
-idempotent — re-running it changes nothing.
+`infra/` holds a complete GCP + Firebase deployment: Cloud Run, Cloud SQL with
+pgvector, GCS, Firebase Hosting, and CI through Workload Identity Federation.
 
-`deploy.sh` shows you a plan, asks before applying, waits for the app to answer,
-then publishes Firebase Hosting and prints your URL. Use `--plan-only` to look
-first.
+**It is unfinished.** It reaches `terraform apply` and creates most resources,
+but has not been driven to a working deployment end to end. Treat it as a
+strong starting point rather than a working path, and read
+[docs/cost.md](docs/cost.md) first — expect roughly $10–25/month.
 
-Login works immediately with Open WebUI's own accounts. To switch to Google
-sign-in later:
-
-```sh
-./scripts/enable-oidc.sh    # scripts everything except two console clicks
-```
-
-That is the one part that cannot be fully automated — neither gcloud nor the
-Firebase CLI can create an OAuth client or enable a sign-in provider. The script
-does the rest and tells you exactly what to click.
-
-To tear it all down: `./scripts/destroy.sh`.
+Start with [docs/deploy-from-browser.md](docs/deploy-from-browser.md).
 
 ## Repository map
 
 | Path | |
 |------|--|
-| `scripts/` | Bootstrap, deploy, enable-oidc, destroy |
-| `infra/terraform/` | The GCP footprint |
-| `infra/firebase/` | Hosting + Auth setup |
-| `compose.yaml` | Local stack, mirrors production |
+| `compose.yaml` | The local stack |
+| `scripts/start.sh` | Start, stop, logs |
 | `docs/configuring.md` | Where config lives, and why |
 | `docs/architecture.md` | How it fits together |
 | `docs/adr/` | Decisions, and why |
-| `docs/cost.md` | What it costs, and the levers |
-| `docs/deploy-from-browser.md` | Deploying from Cloud Shell, no local installs |
 | `docs/upgrading.md` | Taking a new Open WebUI release |
-
-## Status
-
-Infrastructure and the deploy scripts are written; the local stack runs.
-
-**Not yet deployed.** Terraform has never been applied against a real GCP
-project, and the scripts' `gcloud` calls were tested against stubs rather than
-against Google — the control flow, idempotency and generated files are verified,
-the cloud-side command syntax is not. Expect the first `bootstrap.sh` run to
-need a fix or two.
-
-Known limits are in [docs/architecture.md](docs/architecture.md#known-limits),
-and [docs/cost.md](docs/cost.md) has the money. Configured to scale to zero:
-roughly $10-25/month, mostly the database, with a ~30-60s cold start on the
-first request after a quiet spell.
+| `infra/` | The optional cloud deployment |

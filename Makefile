@@ -16,9 +16,8 @@ secrets: ## Print a freshly generated WEBUI_SECRET_KEY
 	@echo "WEBUI_SECRET_KEY=$$(openssl rand -hex 32)"
 
 .PHONY: up
-up: ## Start the local stack
-	docker compose up -d
-	@echo "ZINO: http://localhost:3000"
+up: ## Start the local stack (same as ./scripts/start.sh)
+	./scripts/start.sh
 
 .PHONY: down
 down: ## Stop the local stack
