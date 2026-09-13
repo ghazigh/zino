@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is gitignored.
+project_id = "your-gcp-project-id"
+region     = "europe-west1"
+
+# Leave empty to use https://<project-id>.web.app
+domain = ""
+
+github_repository = "ghazigh/zino"

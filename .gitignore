@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node
+node_modules/
+.svelte-kit/
+
+# Env & secrets — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*-sa-key.json
+service-account*.json
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+.terraform.lock.hcl
+
+# Firebase
+.firebaserc
+.firebase/
+firebase-debug.log
+
+# Local data
+data/
+volumes/
+.DS_Store

@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  agents:
+    name: zino-agents (lint + test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/zino-agents
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv pip install --system -e ".[dev]"
+
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Test
+        run: pytest -q
+
+  build:
+    name: Build image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Proves the image builds on every PR, without needing cloud credentials.
+      - name: Build agent gateway image
+        run: docker build -t zino-agents:ci services/zino-agents
+
+  compose:
+    name: Validate compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render and validate compose config
+        run: |
+          cp .env.example .env
+          # Substitute placeholders for the required-but-empty secrets so the
+          # `:?` guards do not fail validation.
+          sed -i 's/^WEBUI_SECRET_KEY=$/WEBUI_SECRET_KEY=ci/' .env
+          sed -i 's/^ZINO_API_KEY=$/ZINO_API_KEY=ci/' .env
+          docker compose config --quiet
+
+  terraform:
+    name: Terraform fmt + validate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+      - run: terraform fmt -check -recursive
+      # No backend and no credentials: validates syntax and types only.
+      - run: terraform init -backend=false
+      - run: terraform validate
